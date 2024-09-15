@@ -9,7 +9,7 @@ setup(
 
 	description=description,
 
-	url="None",
+	url="https://github.com/cattedoctor/Poison",
 
 	author="catte",
 	author_email="cattedoctor@gmail.com",
