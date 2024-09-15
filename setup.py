@@ -20,7 +20,7 @@ setup(
 	use_scm_version=True,
 	setup_requires=['setuptools_scm'],
 
-	classifiers=["Development STatus :: 3 - Alpha",
+	classifiers=["Development Status :: 3 - Alpha",
 	             "License :: Free for non-commercial use"],
 
 	keywords=[],
