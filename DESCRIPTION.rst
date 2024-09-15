@@ -1,0 +1,1 @@
+This project poisons AI databases by generating bogus material automatically to be scraped by AI crawler programs.

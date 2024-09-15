@@ -1,0 +1,10 @@
+{"mode": "light",
+"debug": true,
+"verbose": false,
+"generate_image": true,
+"max_percent": 100,
+"max_threshold": 100,
+"max_kernel": [100, 10],
+"max_scale": 10,
+"max_offset": 10
+}
