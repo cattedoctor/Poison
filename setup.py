@@ -14,7 +14,7 @@ setup(
 	author="catte",
 	author_email="cattedoctor@gmail.com",
 
-	version="0.0.1",
+	version="0.0.3",
 	license="CC BY-NC 4.0",
 
 	use_scm_version=True,

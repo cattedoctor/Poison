@@ -20,15 +20,15 @@
 # Text Generation
 # TODO : Add text generation of search terms, authors, and paragraphs of text
 #
-# Video Generation
-# TODO : Add generation of videos
-#
-# Sound Generation
-# TODO : Add generation of sound, to be used in videos
+# 3D Model Generation
+# TODO : Add 3D model generation
 #
 ###############################################################################
 
-import random, os, string, time, json
+###############################################################################
+# Imports
+###############################################################################
+import random, os, string, json
 
 import numpy as np
 
@@ -37,7 +37,8 @@ from PIL.ExifTags import Base as ExifTags
 
 import skimage
 
-from . import Utils
+# from . import Utils
+import Utils
 
 
 ###############################################################################
@@ -45,7 +46,7 @@ from . import Utils
 ###############################################################################
 class Poison(object):
 	# Initialization
-	def __init__(self, mode=None, debug=False, verbose=False, config_path=None):
+	def __init__(self, mode=None, debug=False, verbose=False, config_path=None, generate_image=False, generate_music=False, generate_video=False):
 		self.mode = None
 
 		if mode is None:
@@ -57,22 +58,25 @@ class Poison(object):
 		else:
 			raise Exception(f"Mode {mode} not implemented")
 
+		# Debug Variab;es
 		self.debug = debug
 		self.verbose = verbose
-		self.config_path = config_path
 
 		# Configuration Variables
 		self.config = None
-		self.generate_image = None
+		self.config_path = config_path
+		self.generate_image = generate_image
+		self.generate_music = generate_music
+		self.generate_video = generate_video
 
-		# Filter Variables
+		# Image Filter Variables
 		self.max_percent = None
 		self.max_threshold = None
 		self.max_kernel = None
 		self.max_scale = None
 		self.max_offset = None
 
-		# Noise Variables
+		# Image Noise Variables
 		self.mean = None
 		self.var = None
 		self.local_vars = None
@@ -93,16 +97,25 @@ class Poison(object):
 				raise Exception(f"Config path {config_path} is not a file")
 
 		if Utils.check_config(self.config):
-			generate_image = self.process_config()
+			self.process_config()
 
 		else:
-			generate_image = self.load_defaults()
+			self.load_defaults()
 
-		if generate_image:
-			from . import PoisonImage as PoisonImage
-			self.image = PoisonImage.PoisonImage(mode=self.mode, debug=self.debug, verbose=self.verbose,
-							                     max_percent=self.max_percent, max_threshold=self.max_threshold,
-							                     max_kernel=self.max_kernel, max_scale=self.max_scale, max_offset=self.max_offset)
+		if self.generate_image:
+			from PoisonImage import PoisonImage
+
+			self.image = PoisonImage(mode=self.mode, debug=self.debug, verbose=self.verbose,
+				                     max_percent=self.max_percent, max_threshold=self.max_threshold,
+				                     max_kernel=self.max_kernel, max_scale=self.max_scale, max_offset=self.max_offset)
+
+		if self.generate_music:
+			from PoisonMusic import PoisonMusic
+			self.music = PoisonMusic(mode=self.mode, debug=self.debug, verbose=self.verbose)
+
+		if self.generate_video:
+			from PoisonVideo import PoisonVideo
+			self.video = PoisonVideo(mode=self.mode, debug=self.debug, verbose=self.verbose, config=self.config)
 
 	# Save Config
 	def save_config(self):
@@ -111,8 +124,6 @@ class Poison(object):
 
 	# Process Config
 	def process_config(self):
-		generate_image = False
-
 		for key, value in self.config.items():
 			if key == "config":
 				print(value)
@@ -125,16 +136,18 @@ class Poison(object):
 					self.load_defaults()
 					break
 
-			elif key in ["debug", "verbose", "max_percent", "max_threshold", "max_kernel", "max_scale", "max_offset", "mean", "var", "local_vars"]:
+			elif key in ["debug", "verbose", "max_percent", "max_threshold", "max_kernel", "max_scale", "max_offset",
+						 "octave_range", "musical_key", "key_type", "num_notes", "max_note_duration", "song_duration", "song_extension"]:
 				self.set_value(key, value)
 
 			elif key == "generate_image":
-				generate_image = value
+				self.generate_image = value
+
+			elif key == "generate_music":
+				self.generate_music = value
 
 			else:
 				raise Exception(f"Config key {key} not recognized")
-
-		return generate_image
 
 	# Set Value
 	def set_value(self, key, value):
@@ -146,70 +159,146 @@ class Poison(object):
 
 	# Load Defaults
 	def load_defaults(self):
-		generate_image = False
-
 		if self.mode is None:
 			self.mode = "light"
 
 		if self.mode.lower() == "light":
-			self.max_percent = 100
-			self.max_threshold = 100
-			self.max_kernel = (100, 10)
-			self.max_scale = 10
-			self.max_offset = 10
-			generate_image = True
+			if self.generate_image:
+				self.max_percent = 100
+				self.max_threshold = 100
+				self.max_kernel = (100, 10)
+				self.max_scale = 10
+				self.max_offset = 10
+
+			if self.generate_music:
+				self.octave_range = "middle"
+				self.musical_key = "C"
+				self.key_type = "major"
+				self.num_notes = 100
+				self.max_note_duration = 100
+				self.song_duration = 600
+				self.song_extension = "wav"
 
 		elif self.mode.lower() == "medium":
-			self.max_percent = 500
-			self.max_threshold = 500
-			self.max_kernel = (500, 50)
-			self.max_scale = 50
-			self.max_offset = 50
-			generate_image = True
+			if self.generate_image:
+				self.max_percent = 500
+				self.max_threshold = 500
+				self.max_kernel = (500, 50)
+				self.max_scale = 50
+				self.max_offset = 50
+
+			if self.generate_music:
+				self.octave_range = "middle"
+				self.musical_key = "C"
+				self.key_type = "major"
+				self.num_notes = 1000
+				self.max_note_duration = 250
+				self.song_duration = 6000
+				self.song_extension = "wav"
 
 		elif self.mode.lower() == "heavy":
-			self.max_percent = 1000
-			self.max_threshold = 1000
-			self.max_kernel = (1000, 100)
-			self.max_scale = 100
-			self.max_offset = 100
-			generate_image = True
+			if self.generate_image:
+				self.max_percent = 1000
+				self.max_threshold = 1000
+				self.max_kernel = (1000, 100)
+				self.max_scale = 100
+				self.max_offset = 100
+
+			if self.generate_music:
+				self.octave_range = "middle"
+				self.musical_key = "C"
+				self.key_type = "major"
+				self.num_notes = 1000
+				self.max_note_duration = 500
+				self.song_duration = 60000
+				self.song_extension = "wav"
 
 		else:
 			raise Exception(f"Mode {self.mode.lower()} not implemented")
 
-		return generate_image
 
 ###############################################################################
 # Test
 ###############################################################################
 if __name__ == "__main__":
+	from PoisonImage import DICT_OF_COLORS
+
+	generate_image = False
+	generate_music = False
+	generate_video = True
+
 	num_generated = 10
 	config_path = os.path.join(os.getcwd(), 'config.json')
 
-	colors = Utils.DICT_OF_COLORS["pansexual"]
+	colors = DICT_OF_COLORS["pansexual"]
 
 	poison = Poison(config_path=config_path)
 
 	if poison.debug:
+		import time
 		average_time = 0.0
 
-	for index in range(1, num_generated):
+	if generate_image:
+		for index in range(1, num_generated + 1):
+			if poison.debug:
+				start_time = time.thread_time()
+				print(f"\nGenerating image #{index}")
+
+			# colors = random.choice(list(DICT_OF_COLORS.values()))
+
+			output_file_name = poison.image.generate_image_simple(image_mode="RGB", extension="jpg", image_name_length=32, image_size=(1920, 1080), colors=colors)
+
+			if poison.debug:
+				elapsed_time = time.thread_time() - start_time
+				average_time = (average_time * (index - 1) + elapsed_time) / index
+				print(f"\telapsed time: {elapsed_time:3.3f} s")
+
+			# poison.image.delete_image(output_file_name)
+
 		if poison.debug:
-			start_time = time.thread_time()
-			print(f"\nGenerating image #{index}")
+			print(f"\naverage time: {average_time:3.3f} s")
+			print(f"\nProgram complete")
 
-		# colors = random.choice(list(DICT_OF_COLORS.values()))
+	if generate_music:
+		if poison.debug:
+			average_time = 0.0
 
-		output_file_name = poison.image.generate_image_simple(image_mode="RGB", extension="jpg", image_name_length=32, image_size=(1920, 1080), colors=colors)
+		for index in range(1, num_generated + 1):
+			if poison.debug:
+				start_time = time.thread_time()
+				print(f"\nGenerating music #{index}")
+
+			music_file = poison.music.generate_music_simple(key=poison.musical_key, key_type=poison.key_type, octave_range=poison.octave_range, song_duration=poison.song_duration)
+
+			if poison.debug:
+				elapsed_time = time.thread_time() - start_time
+				average_time = (average_time * (index - 1) + elapsed_time) / index
+				print(f"\telapsed time: {elapsed_time:3.3f} s")
+
+			# poison.music.delete_music(music_file)
 
 		if poison.debug:
-			elapsed_time = time.thread_time() - start_time
-			average_time = (average_time * (index - 1) + elapsed_time) / index
-			print(f"\telapsed time: {elapsed_time:3.3f} s")
+			print(f"\naverage time: {average_time:3.3f} s")
+			print(f"\nProgram complete")
 
-	if poison.debug:
-		print(f"\naverage time: {average_time:3.3f} s")
-		print(f"\nProgram complete")
+	if generate_video:
+		if poison.debug:
+			average_time = 0.0
+
+		for index in range(1, num_generated + 1):
+			if poison.debug:
+				start_Time = time.thread_time()
+				print(f"\nGenerating video #{index}")
+
+			poison.video.generate_video_simple()
+
+			if poison.debug:
+				elapsed_time = time.thread_time() - start_time
+				average_time = (average_time * (index - 1) + elapsed_time) / index
+				print(f"\telapsed time: {elapsed_time:3.3f} s")
+
+		if poison.debug:
+			print(f"\naverage time: {average_time:3.3f} s")
+			print(f"\nProgram complete")
 
 	# poison.save_config()

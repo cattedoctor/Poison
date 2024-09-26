@@ -1,0 +1,19 @@
+{
+"mode": "medium",
+"debug": true,
+"verbose": false,
+"generate_image": true,
+"max_percent": 100,
+"max_threshold": 100,
+"max_kernel": [100, 10],
+"max_scale": 10,
+"max_offset": 10,
+"generate_music": true,
+"octave_range": "middle",
+"musical_key": "C",
+"key_type": "major",
+"num_notes": 100,
+"max_note_duration": 100,
+"song_duration": 600,
+"song_extension": "wav"
+}
